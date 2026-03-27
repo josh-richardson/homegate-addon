@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/homegate/agent/internal/protocol"
@@ -76,6 +77,14 @@ func (p *RequestProxy) HandleStream(streamID uint32, requestFrames []*protocol.F
 	}
 
 	for k, v := range reqHeaders.Headers {
+		// Strip proxy/CDN headers — the agent is the final hop, not a proxy.
+		// Forwarding these to HA from an untrusted IP causes 400 errors.
+		switch strings.ToLower(k) {
+		case "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host",
+			"x-real-ip", "cf-connecting-ip", "cf-ipcountry", "cf-ray",
+			"cf-visitor", "cdn-loop", "connection":
+			continue
+		}
 		req.Header.Set(k, v)
 	}
 
