@@ -100,6 +100,7 @@ func (c *Client) Connect() error {
 		}
 
 		c.state.Store(int32(StateConnecting))
+		connStart := time.Now()
 		err := c.connectOnce()
 		if err != nil {
 			log.Printf("connection error: %v", err)
@@ -110,7 +111,12 @@ func (c *Client) Connect() error {
 				return err
 			}
 
-			attempt++
+			// Reset backoff if the connection was up for a while (not a fast failure)
+			if time.Since(connStart) > 30*time.Second {
+				attempt = 1
+			} else {
+				attempt++
+			}
 			continue
 		}
 
@@ -162,8 +168,30 @@ func (c *Client) connectOnce() error {
 
 	log.Printf("connected to broker, label=%s", ack.Label)
 
-	// Read loop
-	return c.readLoop(ws)
+	// Start ping keepalive to prevent Cloudflare idle timeout (100s)
+	pingDone := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				c.mu.Lock()
+				if c.ws != nil {
+					c.ws.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
+				}
+				c.mu.Unlock()
+			case <-pingDone:
+				return
+			case <-c.done:
+				return
+			}
+		}
+	}()
+
+	err = c.readLoop(ws)
+	close(pingDone)
+	return err
 }
 
 func (c *Client) readLoop(ws *websocket.Conn) error {
