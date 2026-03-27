@@ -82,7 +82,7 @@ func (p *RequestProxy) HandleStream(streamID uint32, requestFrames []*protocol.F
 		switch strings.ToLower(k) {
 		case "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host",
 			"x-real-ip", "cf-connecting-ip", "cf-ipcountry", "cf-ray",
-			"cf-visitor", "cdn-loop", "connection":
+			"cf-visitor", "cdn-loop", "connection", "accept-encoding":
 			continue
 		}
 		req.Header.Set(k, v)
