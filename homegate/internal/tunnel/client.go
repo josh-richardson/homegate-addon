@@ -285,7 +285,33 @@ dispatch:
 			c.ws.WriteMessage(websocket.BinaryMessage, f.Encode())
 		}
 	}
+
+	// Check if this is a WebSocket upgrade request
+	if c.isWebSocketRequest(frames) {
+		var reqHeaders RequestHeaders
+		for _, f := range frames {
+			if f.Type == protocol.FrameRequestHeaders {
+				json.Unmarshal(f.Payload, &reqHeaders)
+				break
+			}
+		}
+		c.proxy.HandleWebSocket(streamID, reqHeaders, ch, sendFrame)
+		return
+	}
+
 	c.proxy.HandleStream(streamID, frames, sendFrame)
+}
+
+func (c *Client) isWebSocketRequest(frames []*protocol.Frame) bool {
+	for _, f := range frames {
+		if f.Type == protocol.FrameRequestHeaders {
+			var reqHeaders RequestHeaders
+			if err := json.Unmarshal(f.Payload, &reqHeaders); err == nil {
+				return isWebSocketUpgrade(reqHeaders.Headers)
+			}
+		}
+	}
+	return false
 }
 
 func (c *Client) backoff(attempt int) time.Duration {
