@@ -12,5 +12,6 @@ fi
 
 export DATA_DIR=/data
 export INGRESS_PORT=8080
+export HA_TARGET=http://homeassistant:8123
 
 exec agent

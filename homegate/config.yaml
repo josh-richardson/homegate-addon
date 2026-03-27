@@ -1,5 +1,5 @@
 name: Homegate
-version: "1.0.2"
+version: "1.0.3"
 slug: homegate
 description: Secure remote access to Home Assistant via Homegate tunnels
 url: https://github.com/josh-richardson/homegate-addon
