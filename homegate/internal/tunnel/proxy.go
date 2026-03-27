@@ -87,6 +87,10 @@ func (p *RequestProxy) HandleStream(streamID uint32, requestFrames []*protocol.F
 		}
 		req.Header.Set(k, v)
 	}
+	// Explicitly request uncompressed responses so Content-Length is accurate.
+	// Go's http.Client auto-adds Accept-Encoding: gzip and decompresses,
+	// which strips Content-Length and causes 0-byte responses through Cloudflare.
+	req.Header.Set("Accept-Encoding", "identity")
 
 	// Execute request
 	resp, err := p.client.Do(req)
