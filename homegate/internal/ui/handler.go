@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -53,14 +54,20 @@ func (h *Handler) SetState(state, label, errMsg string) {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Use HasSuffix so routes work behind HA ingress proxy which may
+	// preserve the /api/hassio_ingress/<token>/ prefix.
 	switch {
-	case r.Method == "POST" && r.URL.Path == "/claim":
+	case r.Method == "POST" && hasSuffix(r.URL.Path, "/claim"):
 		h.handleClaim(w, r)
-	case r.Method == "POST" && r.URL.Path == "/retry":
+	case r.Method == "POST" && hasSuffix(r.URL.Path, "/retry"):
 		h.handleRetry(w, r)
 	default:
 		h.renderStatus(w)
 	}
+}
+
+func hasSuffix(path, suffix string) bool {
+	return path == suffix || strings.HasSuffix(path, suffix)
 }
 
 func (h *Handler) renderStatus(w http.ResponseWriter) {
@@ -101,12 +108,12 @@ func (h *Handler) handleClaim(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, ".", http.StatusSeeOther)
 }
 
 func (h *Handler) handleRetry(w http.ResponseWriter, r *http.Request) {
 	if h.OnRetry != nil {
 		h.OnRetry()
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, ".", http.StatusSeeOther)
 }

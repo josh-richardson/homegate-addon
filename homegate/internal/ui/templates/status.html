@@ -23,7 +23,7 @@
 
   {{if eq .State "unclaimed"}}
   <div class="status unclaimed">Not yet claimed</div>
-  <form method="POST" action="/claim">
+  <form method="POST" action="claim">
     <p>Paste the claim token from your Homegate dashboard:</p>
     <input type="text" name="token" placeholder="Claim token" required>
     <button type="submit">Claim</button>
@@ -42,7 +42,7 @@
   {{else if eq .State "failed"}}
   <div class="status failed">Connection Failed</div>
   <p class="info">{{.Error}}</p>
-  <form method="POST" action="/retry">
+  <form method="POST" action="retry">
     <button type="submit">Retry</button>
   </form>
   {{end}}
