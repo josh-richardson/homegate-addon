@@ -15,16 +15,16 @@ var templateFS embed.FS
 
 type templateData struct {
 	State   string
-	Label   string
-	Domain  string
+	FQDN    string
 	Version string
 	Error   string
 }
 
 type Handler struct {
-	tmpl    *template.Template
-	domain  string
-	version string
+	tmpl      *template.Template
+	domain    string
+	separator string
+	version   string
 
 	mu    sync.RWMutex
 	state string
@@ -35,13 +35,14 @@ type Handler struct {
 	OnRetry func()
 }
 
-func NewHandler(domain, version string) *Handler {
+func NewHandler(domain, separator, version string) *Handler {
 	tmpl := template.Must(template.ParseFS(templateFS, "templates/*.html"))
 	return &Handler{
-		tmpl:    tmpl,
-		domain:  domain,
-		version: version,
-		state:   "unclaimed",
+		tmpl:      tmpl,
+		domain:    domain,
+		separator: separator,
+		version:   version,
+		state:     "unclaimed",
 	}
 }
 
@@ -72,10 +73,13 @@ func hasSuffix(path, suffix string) bool {
 
 func (h *Handler) renderStatus(w http.ResponseWriter) {
 	h.mu.RLock()
+	fqdn := ""
+	if h.label != "" {
+		fqdn = h.label + h.separator + h.domain
+	}
 	data := templateData{
 		State:   h.state,
-		Label:   h.label,
-		Domain:  h.domain,
+		FQDN:    fqdn,
 		Version: h.version,
 		Error:   h.error,
 	}

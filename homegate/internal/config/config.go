@@ -4,13 +4,14 @@ package config
 import "os"
 
 type Config struct {
-	APIBaseURL     string // NestJS API URL for claiming
-	BrokerURL      string // WebSocket URL for tunnel (overridden by claim response)
-	DataDir        string // Credential storage directory
-	HATarget       string // Local HA web interface (http://homeassistant:8123)
-	IngressPort    string // Port for ingress panel
-	HostnameDomain string // Domain for public URLs (e.g. homegate.example)
-	AgentVersion   string
+	APIBaseURL        string // NestJS API URL for claiming
+	BrokerURL         string // WebSocket URL for tunnel (overridden by claim response)
+	DataDir           string // Credential storage directory
+	HATarget          string // Local HA web interface (http://homeassistant:8123)
+	IngressPort       string // Port for ingress panel
+	HostnameDomain    string // Domain for public URLs (e.g. homegate.example)
+	HostnameSeparator string // Separator between label and domain (e.g. "-")
+	AgentVersion      string
 }
 
 func Load() *Config {
@@ -20,8 +21,9 @@ func Load() *Config {
 		DataDir:        envStr("DATA_DIR", "/data"),
 		HATarget:       envStr("HA_TARGET", "http://homeassistant:8123"),
 		IngressPort:    envStr("INGRESS_PORT", "8080"),
-		HostnameDomain: envStr("HOSTNAME_DOMAIN", "homegate.example"),
-		AgentVersion:   envStr("AGENT_VERSION", "1.0.0"),
+		HostnameDomain:    envStr("HOSTNAME_DOMAIN", "homegate.example"),
+		HostnameSeparator: envStr("HOSTNAME_SEPARATOR", "."),
+		AgentVersion:      envStr("AGENT_VERSION", "1.0.0"),
 	}
 }
 

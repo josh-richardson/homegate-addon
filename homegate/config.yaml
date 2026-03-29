@@ -21,7 +21,9 @@ options:
   api_base_url: "https://test.homegate.network/api"
   broker_url: "wss://broker-test.homegate.network"
   hostname_domain: "test.homegate.network"
+  hostname_separator: "-"
 schema:
   api_base_url: url
   broker_url: url
   hostname_domain: str
+  hostname_separator: str
