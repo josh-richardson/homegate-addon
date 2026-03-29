@@ -21,7 +21,7 @@ func main() {
 	cfg := config.Load()
 
 	store := credentials.NewStore(cfg.DataDir)
-	uiHandler := ui.NewHandler(cfg.HostnameDomain, cfg.HostnameSeparator, cfg.AgentVersion)
+	uiHandler := ui.NewHandler(cfg.HostnameDomain, cfg.HostnameSeparator, cfg.AgentVersion, cfg.DashboardURL)
 
 	// Try loading existing credentials
 	creds, err := store.Load()

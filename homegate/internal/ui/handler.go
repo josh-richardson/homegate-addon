@@ -14,17 +14,19 @@ import (
 var templateFS embed.FS
 
 type templateData struct {
-	State   string
-	FQDN    string
-	Version string
-	Error   string
+	State        string
+	FQDN         string
+	Version      string
+	Error        string
+	DashboardURL string
 }
 
 type Handler struct {
-	tmpl      *template.Template
-	domain    string
-	separator string
-	version   string
+	tmpl         *template.Template
+	domain       string
+	separator    string
+	version      string
+	dashboardURL string
 
 	mu    sync.RWMutex
 	state string
@@ -35,14 +37,15 @@ type Handler struct {
 	OnRetry func()
 }
 
-func NewHandler(domain, separator, version string) *Handler {
+func NewHandler(domain, separator, version, dashboardURL string) *Handler {
 	tmpl := template.Must(template.ParseFS(templateFS, "templates/*.html"))
 	return &Handler{
-		tmpl:      tmpl,
-		domain:    domain,
-		separator: separator,
-		version:   version,
-		state:     "unclaimed",
+		tmpl:         tmpl,
+		domain:       domain,
+		separator:    separator,
+		version:      version,
+		dashboardURL: dashboardURL,
+		state:        "unclaimed",
 	}
 }
 
@@ -78,10 +81,11 @@ func (h *Handler) renderStatus(w http.ResponseWriter) {
 		fqdn = h.label + h.separator + h.domain
 	}
 	data := templateData{
-		State:   h.state,
-		FQDN:    fqdn,
-		Version: h.version,
-		Error:   h.error,
+		State:        h.state,
+		FQDN:         fqdn,
+		Version:      h.version,
+		Error:        h.error,
+		DashboardURL: h.dashboardURL,
 	}
 	h.mu.RUnlock()
 

@@ -10,12 +10,12 @@
       max-width: 480px;
       margin: 40px auto;
       padding: 0 20px;
-      color: #1a1a2e;
-      background: #f0f2f5;
+      color: #e1e1e1;
+      background: transparent;
     }
     h1 {
       font-size: 1.4em;
-      color: #1a1a2e;
+      color: #fff;
       margin-bottom: 20px;
     }
     .status {
@@ -26,24 +26,24 @@
       border: 1px solid;
     }
     .connected {
-      background: #d1fae5;
-      color: #065f46;
-      border-color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.3);
     }
     .reconnecting {
-      background: #fef3c7;
-      color: #92400e;
-      border-color: #fcd34d;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.3);
     }
     .failed {
-      background: #fee2e2;
-      color: #991b1b;
-      border-color: #fca5a5;
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.3);
     }
     .unclaimed {
-      background: #dbeafe;
-      color: #1e40af;
-      border-color: #93c5fd;
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      border-color: rgba(59, 130, 246, 0.3);
     }
     input[type=text] {
       width: 100%;
@@ -51,15 +51,18 @@
       margin: 8px 0;
       box-sizing: border-box;
       font-size: 1em;
-      border: 1px solid #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 6px;
-      background: #fff;
-      color: #1a1a2e;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    input[type=text]::placeholder {
+      color: rgba(255, 255, 255, 0.4);
     }
     input[type=text]:focus {
       outline: none;
       border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
     }
     button {
       padding: 10px 20px;
@@ -72,23 +75,48 @@
       color: white;
     }
     button:hover {
-      background: #1d4ed8;
+      background: #3b82f6;
     }
     p {
-      color: #374151;
+      color: #d1d5db;
       line-height: 1.5;
     }
     .info {
       font-size: 0.9em;
-      color: #4b5563;
+      color: #9ca3af;
       margin: 4px 0;
     }
     .info strong {
-      color: #1a1a2e;
+      color: #f3f4f6;
     }
     .error {
-      color: #dc2626;
+      color: #f87171;
       font-weight: 500;
+    }
+    a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .steps {
+      margin: 16px 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: step;
+    }
+    .steps li {
+      counter-increment: step;
+      padding: 8px 0;
+      color: #d1d5db;
+      line-height: 1.5;
+    }
+    .steps li::before {
+      content: counter(step) ".";
+      font-weight: 600;
+      color: #60a5fa;
+      margin-right: 8px;
     }
   </style>
 </head>
@@ -97,8 +125,13 @@
 
   {{if eq .State "unclaimed"}}
   <div class="status unclaimed">Not yet claimed</div>
+  <p>To connect this Home Assistant instance to Homegate:</p>
+  <ol class="steps">
+    <li>Log in to your <a href="{{.DashboardURL}}" target="_blank">Homegate dashboard</a></li>
+    <li>Create a new site and generate a claim token</li>
+    <li>Paste the token below and click Claim</li>
+  </ol>
   <form method="POST" action="claim">
-    <p>Paste the claim token from your Homegate dashboard:</p>
     <input type="text" name="token" placeholder="Claim token" required>
     <button type="submit">Claim</button>
   </form>

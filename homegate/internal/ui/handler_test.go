@@ -10,7 +10,7 @@ import (
 )
 
 func TestRenderUnclaimed(t *testing.T) {
-	h := NewHandler("homegate.example", ".", "1.0.0")
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 
 	req := httptest.NewRequest("GET", "/", nil)
 	rec := httptest.NewRecorder()
@@ -29,7 +29,7 @@ func TestRenderUnclaimed(t *testing.T) {
 }
 
 func TestRenderConnected(t *testing.T) {
-	h := NewHandler("homegate.example", ".", "1.0.0")
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 	h.SetState("connected", "coral-thunder-maple", "")
 
 	req := httptest.NewRequest("GET", "/", nil)
@@ -46,7 +46,7 @@ func TestRenderConnected(t *testing.T) {
 }
 
 func TestRenderFailed(t *testing.T) {
-	h := NewHandler("homegate.example", ".", "1.0.0")
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 	h.SetState("failed", "", "Device may have been revoked")
 
 	req := httptest.NewRequest("GET", "/", nil)
@@ -63,7 +63,7 @@ func TestRenderFailed(t *testing.T) {
 }
 
 func TestClaimPost(t *testing.T) {
-	h := NewHandler("homegate.example", ".", "1.0.0")
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 
 	var claimedToken string
 	h.OnClaim = func(token string) error {
@@ -87,7 +87,7 @@ func TestClaimPost(t *testing.T) {
 }
 
 func TestRetryPost(t *testing.T) {
-	h := NewHandler("homegate.example", ".", "1.0.0")
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 
 	retryCalled := false
 	h.OnRetry = func() {
