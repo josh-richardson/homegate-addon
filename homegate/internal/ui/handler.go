@@ -116,12 +116,21 @@ func (h *Handler) handleClaim(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, ".", http.StatusSeeOther)
+	http.Redirect(w, r, ingressRoot(r.URL.Path, "/claim"), http.StatusSeeOther)
 }
 
 func (h *Handler) handleRetry(w http.ResponseWriter, r *http.Request) {
 	if h.OnRetry != nil {
 		h.OnRetry()
 	}
-	http.Redirect(w, r, ".", http.StatusSeeOther)
+	http.Redirect(w, r, ingressRoot(r.URL.Path, "/retry"), http.StatusSeeOther)
+}
+
+// ingressRoot returns the addon's root path by stripping the action suffix.
+// e.g. "/api/hassio_ingress/<token>/claim" → "/api/hassio_ingress/<token>/"
+func ingressRoot(path, suffix string) string {
+	if strings.HasSuffix(path, suffix) {
+		return strings.TrimSuffix(path, suffix) + "/"
+	}
+	return "./"
 }

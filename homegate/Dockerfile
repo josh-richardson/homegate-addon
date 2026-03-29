@@ -5,7 +5,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /agent .
+
+COPY config.yaml /tmp/config.yaml
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-X main.version=$(grep '^version:' /tmp/config.yaml | tr -d ' \"' | cut -d: -f2)" \
+    -o /agent .
 
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates jq

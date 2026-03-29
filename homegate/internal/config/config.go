@@ -15,7 +15,6 @@ type Config struct {
 	HostnameDomain    string // Domain for public URLs (e.g. homegate.example)
 	HostnameSeparator string // Separator between label and domain (e.g. "-")
 	DashboardURL      string // Web dashboard URL
-	AgentVersion      string
 }
 
 func Load() *Config {
@@ -31,7 +30,6 @@ func Load() *Config {
 		HostnameDomain:    envStr("HOSTNAME_DOMAIN", "homegate.example"),
 		HostnameSeparator: envStr("HOSTNAME_SEPARATOR", "."),
 		DashboardURL:      dashboardURL,
-		AgentVersion:      envStr("AGENT_VERSION", "1.0.0"),
 	}
 }
 
