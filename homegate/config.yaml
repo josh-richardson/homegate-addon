@@ -1,6 +1,7 @@
 name: Homegate
 version: "1.0.10"
 slug: homegate
+image: ghcr.io/josh-richardson/homegate-addon-{arch}
 description: Secure remote access to Home Assistant via Homegate tunnels
 url: https://github.com/josh-richardson/homegate-addon
 arch:
