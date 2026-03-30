@@ -115,7 +115,7 @@
   <div class="status waiting">Waiting to be linked</div>
   {{if eq .LinkStep "ask"}}
   <p>Do you already have a Homegate account?</p>
-  <form method="POST" action="link-step">
+  <form method="POST" action="{{.LinkStepAction}}">
     <button type="submit" name="step" value="has-account">Yes, show link</button>
     <button type="submit" name="step" value="needs-account">No, I need an account</button>
   </form>
@@ -123,7 +123,7 @@
   {{else if eq .LinkStep "register"}}
   <p>Create an account first, then come back here to continue linking this Home Assistant instance:</p>
   <a href="{{.RegistrationURL}}" target="_blank" class="link-box">{{.RegistrationURL}}</a>
-  <form method="POST" action="link-step">
+  <form method="POST" action="{{.LinkStepAction}}">
     <button type="submit" name="step" value="registered">I've created an account</button>
   </form>
 
@@ -146,7 +146,7 @@
   {{else if eq .State "failed"}}
   <div class="status failed">Connection Failed</div>
   <p class="info">{{.Error}}</p>
-  <form method="POST" action="retry">
+  <form method="POST" action="{{.RetryAction}}">
     <button type="submit">Retry</button>
   </form>
   {{end}}

@@ -28,7 +28,7 @@ func TestRenderWaiting(t *testing.T) {
 	h.SetVerificationURL("https://homegate.example/link/abc123")
 	h.SetState("waiting", "", "")
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest("GET", "/api/hassio_ingress/token", nil)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
@@ -38,6 +38,9 @@ func TestRenderWaiting(t *testing.T) {
 	}
 	if !strings.Contains(body, "Do you already have a Homegate account?") {
 		t.Error("expected account prompt")
+	}
+	if !strings.Contains(body, `action="/api/hassio_ingress/token/link-step"`) {
+		t.Error("expected ingress-rooted link-step action")
 	}
 	if strings.Contains(body, "https://homegate.example/link/abc123") {
 		t.Error("did not expect verification URL before account step is complete")
@@ -139,6 +142,19 @@ func TestRetryPost(t *testing.T) {
 
 	if rec.Code != http.StatusSeeOther {
 		t.Errorf("status: got %d, want 303", rec.Code)
+	}
+}
+
+func TestRenderFailedUsesIngressRootedRetryAction(t *testing.T) {
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
+	h.SetState("failed", "", "Device may have been revoked")
+
+	req := httptest.NewRequest("GET", "/api/hassio_ingress/token", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if !strings.Contains(rec.Body.String(), `action="/api/hassio_ingress/token/retry"`) {
+		t.Error("expected ingress-rooted retry action")
 	}
 }
 

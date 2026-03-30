@@ -21,6 +21,8 @@ type templateData struct {
 	RegistrationURL string
 	VerificationURL string
 	LinkStep        string
+	LinkStepAction  string
+	RetryAction     string
 }
 
 type Handler struct {
@@ -80,7 +82,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == "POST" && hasSuffix(r.URL.Path, "/link-step"):
 		h.handleLinkStep(w, r)
 	default:
-		h.renderStatus(w)
+		h.renderStatus(w, r)
 	}
 }
 
@@ -88,12 +90,13 @@ func hasSuffix(path, suffix string) bool {
 	return path == suffix || strings.HasSuffix(path, suffix)
 }
 
-func (h *Handler) renderStatus(w http.ResponseWriter) {
+func (h *Handler) renderStatus(w http.ResponseWriter, r *http.Request) {
 	h.mu.RLock()
 	fqdn := ""
 	if h.label != "" {
 		fqdn = h.label + h.separator + h.domain
 	}
+	root := ingressRoot(r.URL.Path, "")
 	data := templateData{
 		State:           h.state,
 		FQDN:            fqdn,
@@ -103,6 +106,8 @@ func (h *Handler) renderStatus(w http.ResponseWriter) {
 		RegistrationURL: "https://test.homegate.network/register",
 		VerificationURL: h.verificationURL,
 		LinkStep:        h.linkStep,
+		LinkStepAction:  root + "link-step",
+		RetryAction:     root + "retry",
 	}
 	h.mu.RUnlock()
 
@@ -139,8 +144,11 @@ func (h *Handler) handleLinkStep(w http.ResponseWriter, r *http.Request) {
 }
 
 func ingressRoot(path, suffix string) string {
-	if strings.HasSuffix(path, suffix) {
+	if suffix != "" && strings.HasSuffix(path, suffix) {
 		return strings.TrimSuffix(path, suffix) + "/"
 	}
-	return "./"
+	if strings.HasSuffix(path, "/") {
+		return path
+	}
+	return path + "/"
 }
