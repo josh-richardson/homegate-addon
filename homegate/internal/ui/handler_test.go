@@ -28,7 +28,8 @@ func TestRenderWaiting(t *testing.T) {
 	h.SetVerificationURL("https://homegate.example/link/abc123")
 	h.SetState("waiting", "", "")
 
-	req := httptest.NewRequest("GET", "/api/hassio_ingress/token", nil)
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("X-Ingress-Path", "/api/hassio_ingress/token")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
@@ -149,12 +150,30 @@ func TestRenderFailedUsesIngressRootedRetryAction(t *testing.T) {
 	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 	h.SetState("failed", "", "Device may have been revoked")
 
-	req := httptest.NewRequest("GET", "/api/hassio_ingress/token", nil)
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("X-Ingress-Path", "/api/hassio_ingress/token")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
 	if !strings.Contains(rec.Body.String(), `action="/api/hassio_ingress/token/retry"`) {
 		t.Error("expected ingress-rooted retry action")
+	}
+}
+
+func TestLinkStepPostRedirectsToIngressBasePath(t *testing.T) {
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
+
+	req := httptest.NewRequest("POST", "/link-step", strings.NewReader("step=has-account"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-Ingress-Path", "/api/hassio_ingress/token")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("status: got %d, want 303", rec.Code)
+	}
+	if location := rec.Header().Get("Location"); location != "/api/hassio_ingress/token/" {
+		t.Errorf("location: got %q, want %q", location, "/api/hassio_ingress/token/")
 	}
 }
 

@@ -96,7 +96,7 @@ func (h *Handler) renderStatus(w http.ResponseWriter, r *http.Request) {
 	if h.label != "" {
 		fqdn = h.label + h.separator + h.domain
 	}
-	root := ingressRoot(r.URL.Path, "")
+	root := ingressBasePath(r)
 	data := templateData{
 		State:           h.state,
 		FQDN:            fqdn,
@@ -122,7 +122,7 @@ func (h *Handler) handleRetry(w http.ResponseWriter, r *http.Request) {
 	if h.OnRetry != nil {
 		h.OnRetry()
 	}
-	http.Redirect(w, r, ingressRoot(r.URL.Path, "/retry"), http.StatusSeeOther)
+	http.Redirect(w, r, ingressBasePath(r), http.StatusSeeOther)
 }
 
 func (h *Handler) handleLinkStep(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +140,17 @@ func (h *Handler) handleLinkStep(w http.ResponseWriter, r *http.Request) {
 	}
 	h.mu.Unlock()
 
-	http.Redirect(w, r, ingressRoot(r.URL.Path, "/link-step"), http.StatusSeeOther)
+	http.Redirect(w, r, ingressBasePath(r), http.StatusSeeOther)
+}
+
+func ingressBasePath(r *http.Request) string {
+	if path := r.Header.Get("X-Ingress-Path"); path != "" {
+		if strings.HasSuffix(path, "/") {
+			return path
+		}
+		return path + "/"
+	}
+	return ingressRoot(r.URL.Path, "")
 }
 
 func ingressRoot(path, suffix string) string {
