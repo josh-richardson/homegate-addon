@@ -1,15 +1,13 @@
-// apps/agent/internal/ui/handler_test.go
 package ui
 
 import (
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 )
 
-func TestRenderUnclaimed(t *testing.T) {
+func TestRenderInitializing(t *testing.T) {
 	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 
 	req := httptest.NewRequest("GET", "/", nil)
@@ -20,11 +18,26 @@ func TestRenderUnclaimed(t *testing.T) {
 		t.Errorf("status: got %d, want 200", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "Not yet claimed") {
-		t.Error("expected unclaimed state")
+	if !strings.Contains(body, "Initializing") {
+		t.Error("expected initializing state")
 	}
-	if !strings.Contains(body, "Claim token") {
-		t.Error("expected claim form")
+}
+
+func TestRenderWaiting(t *testing.T) {
+	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
+	h.SetVerificationURL("https://homegate.example/link/abc123")
+	h.SetState("waiting", "", "")
+
+	req := httptest.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "Waiting to be linked") {
+		t.Error("expected waiting state")
+	}
+	if !strings.Contains(body, "https://homegate.example/link/abc123") {
+		t.Error("expected verification URL")
 	}
 }
 
@@ -62,30 +75,6 @@ func TestRenderFailed(t *testing.T) {
 	}
 }
 
-func TestClaimPost(t *testing.T) {
-	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
-
-	var claimedToken string
-	h.OnClaim = func(token string) error {
-		claimedToken = token
-		return nil
-	}
-
-	form := url.Values{"token": {"my-claim-token"}}
-	req := httptest.NewRequest("POST", "/claim", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-
-	if claimedToken != "my-claim-token" {
-		t.Errorf("token: got %q, want %q", claimedToken, "my-claim-token")
-	}
-
-	if rec.Code != http.StatusSeeOther {
-		t.Errorf("status: got %d, want 303", rec.Code)
-	}
-}
-
 func TestRetryPost(t *testing.T) {
 	h := NewHandler("homegate.example", ".", "1.0.0", "https://homegate.example")
 
@@ -100,5 +89,9 @@ func TestRetryPost(t *testing.T) {
 
 	if !retryCalled {
 		t.Error("expected OnRetry to be called")
+	}
+
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("status: got %d, want 303", rec.Code)
 	}
 }

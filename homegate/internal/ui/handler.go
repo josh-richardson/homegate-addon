@@ -1,4 +1,3 @@
-// apps/agent/internal/ui/handler.go
 package ui
 
 import (
@@ -14,11 +13,12 @@ import (
 var templateFS embed.FS
 
 type templateData struct {
-	State        string
-	FQDN         string
-	Version      string
-	Error        string
-	DashboardURL string
+	State           string
+	FQDN            string
+	Version         string
+	Error           string
+	DashboardURL    string
+	VerificationURL string
 }
 
 type Handler struct {
@@ -28,12 +28,12 @@ type Handler struct {
 	version      string
 	dashboardURL string
 
-	mu    sync.RWMutex
-	state string
-	label string
-	error string
+	mu              sync.RWMutex
+	state           string
+	label           string
+	error           string
+	verificationURL string
 
-	OnClaim func(token string) error
 	OnRetry func()
 }
 
@@ -45,7 +45,7 @@ func NewHandler(domain, separator, version, dashboardURL string) *Handler {
 		separator:    separator,
 		version:      version,
 		dashboardURL: dashboardURL,
-		state:        "unclaimed",
+		state:        "initializing",
 	}
 }
 
@@ -57,12 +57,14 @@ func (h *Handler) SetState(state, label, errMsg string) {
 	h.error = errMsg
 }
 
+func (h *Handler) SetVerificationURL(url string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.verificationURL = url
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Use HasSuffix so routes work behind HA ingress proxy which may
-	// preserve the /api/hassio_ingress/<token>/ prefix.
 	switch {
-	case r.Method == "POST" && hasSuffix(r.URL.Path, "/claim"):
-		h.handleClaim(w, r)
 	case r.Method == "POST" && hasSuffix(r.URL.Path, "/retry"):
 		h.handleRetry(w, r)
 	default:
@@ -81,11 +83,12 @@ func (h *Handler) renderStatus(w http.ResponseWriter) {
 		fqdn = h.label + h.separator + h.domain
 	}
 	data := templateData{
-		State:        h.state,
-		FQDN:         fqdn,
-		Version:      h.version,
-		Error:        h.error,
-		DashboardURL: h.dashboardURL,
+		State:           h.state,
+		FQDN:            fqdn,
+		Version:         h.version,
+		Error:           h.error,
+		DashboardURL:    h.dashboardURL,
+		VerificationURL: h.verificationURL,
 	}
 	h.mu.RUnlock()
 
@@ -96,29 +99,6 @@ func (h *Handler) renderStatus(w http.ResponseWriter) {
 	}
 }
 
-func (h *Handler) handleClaim(w http.ResponseWriter, r *http.Request) {
-	token := r.FormValue("token")
-	if token == "" {
-		h.mu.Lock()
-		h.error = "Token is required"
-		h.mu.Unlock()
-		h.renderStatus(w)
-		return
-	}
-
-	if h.OnClaim != nil {
-		if err := h.OnClaim(token); err != nil {
-			h.mu.Lock()
-			h.error = err.Error()
-			h.mu.Unlock()
-			h.renderStatus(w)
-			return
-		}
-	}
-
-	http.Redirect(w, r, ingressRoot(r.URL.Path, "/claim"), http.StatusSeeOther)
-}
-
 func (h *Handler) handleRetry(w http.ResponseWriter, r *http.Request) {
 	if h.OnRetry != nil {
 		h.OnRetry()
@@ -126,8 +106,6 @@ func (h *Handler) handleRetry(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, ingressRoot(r.URL.Path, "/retry"), http.StatusSeeOther)
 }
 
-// ingressRoot returns the addon's root path by stripping the action suffix.
-// e.g. "/api/hassio_ingress/<token>/claim" → "/api/hassio_ingress/<token>/"
 func ingressRoot(path, suffix string) string {
 	if strings.HasSuffix(path, suffix) {
 		return strings.TrimSuffix(path, suffix) + "/"

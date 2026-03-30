@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Homegate</title>
-  <meta http-equiv="refresh" content="5">
+  <meta http-equiv="refresh" content="10">
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -40,42 +40,15 @@
       color: #fca5a5;
       border-color: rgba(239, 68, 68, 0.3);
     }
-    .unclaimed {
+    .waiting {
       background: rgba(59, 130, 246, 0.15);
       color: #93c5fd;
       border-color: rgba(59, 130, 246, 0.3);
     }
-    input[type=text] {
-      width: 100%;
-      padding: 10px 12px;
-      margin: 8px 0;
-      box-sizing: border-box;
-      font-size: 1em;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
-    input[type=text]::placeholder {
-      color: rgba(255, 255, 255, 0.4);
-    }
-    input[type=text]:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 1em;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      border-radius: 6px;
-      background: #2563eb;
-      color: white;
-    }
-    button:hover {
-      background: #3b82f6;
+    .initializing {
+      background: rgba(156, 163, 175, 0.15);
+      color: #d1d5db;
+      border-color: rgba(156, 163, 175, 0.3);
     }
     p {
       color: #d1d5db;
@@ -100,41 +73,49 @@
     a:hover {
       text-decoration: underline;
     }
-    .steps {
+    .link-box {
+      display: block;
       margin: 16px 0;
-      padding: 0;
-      list-style: none;
-      counter-reset: step;
-    }
-    .steps li {
-      counter-increment: step;
-      padding: 8px 0;
-      color: #d1d5db;
-      line-height: 1.5;
-    }
-    .steps li::before {
-      content: counter(step) ".";
-      font-weight: 600;
+      padding: 14px 18px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
       color: #60a5fa;
-      margin-right: 8px;
+      font-size: 0.95em;
+      word-break: break-all;
+      text-align: center;
+    }
+    .link-box:hover {
+      background: rgba(59, 130, 246, 0.2);
+      text-decoration: none;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      background: #2563eb;
+      color: white;
+    }
+    button:hover {
+      background: #3b82f6;
     }
   </style>
 </head>
 <body>
   <h1>Homegate</h1>
 
-  {{if eq .State "unclaimed"}}
-  <div class="status unclaimed">Not yet claimed</div>
-  <p>To connect this Home Assistant instance to Homegate:</p>
-  <ol class="steps">
-    <li>Log in to your <a href="{{.DashboardURL}}" target="_blank">Homegate dashboard</a></li>
-    <li>Create a new site and generate a claim token</li>
-    <li>Paste the token below and click Claim</li>
-  </ol>
-  <form method="POST" action="claim">
-    <input type="text" name="token" placeholder="Claim token" required>
-    <button type="submit">Claim</button>
-  </form>
+  {{if eq .State "initializing"}}
+  <div class="status initializing">Initializing...</div>
+  <p class="info">Setting up device link. Please wait.</p>
+
+  {{else if eq .State "waiting"}}
+  <div class="status waiting">Waiting to be linked</div>
+  <p>Click the link below to connect this Home Assistant instance to your Homegate account:</p>
+  <a href="{{.VerificationURL}}" target="_blank" class="link-box">{{.VerificationURL}}</a>
+  <p class="info">This page refreshes automatically. Once you confirm in the dashboard, the connection will start.</p>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
 
   {{else if eq .State "connected"}}
