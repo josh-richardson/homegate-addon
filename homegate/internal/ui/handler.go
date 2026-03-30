@@ -18,7 +18,9 @@ type templateData struct {
 	Version         string
 	Error           string
 	DashboardURL    string
+	RegistrationURL string
 	VerificationURL string
+	LinkStep        string
 }
 
 type Handler struct {
@@ -33,6 +35,7 @@ type Handler struct {
 	label           string
 	error           string
 	verificationURL string
+	linkStep        string
 
 	OnRetry func()
 }
@@ -46,6 +49,7 @@ func NewHandler(domain, separator, version, dashboardURL string) *Handler {
 		version:      version,
 		dashboardURL: dashboardURL,
 		state:        "initializing",
+		linkStep:     "ask",
 	}
 }
 
@@ -63,10 +67,18 @@ func (h *Handler) SetVerificationURL(url string) {
 	h.verificationURL = url
 }
 
+func (h *Handler) ResetLinkStep() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.linkStep = "ask"
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == "POST" && hasSuffix(r.URL.Path, "/retry"):
 		h.handleRetry(w, r)
+	case r.Method == "POST" && hasSuffix(r.URL.Path, "/link-step"):
+		h.handleLinkStep(w, r)
 	default:
 		h.renderStatus(w)
 	}
@@ -88,7 +100,9 @@ func (h *Handler) renderStatus(w http.ResponseWriter) {
 		Version:         h.version,
 		Error:           h.error,
 		DashboardURL:    h.dashboardURL,
+		RegistrationURL: "https://test.homegate.network/register",
 		VerificationURL: h.verificationURL,
+		LinkStep:        h.linkStep,
 	}
 	h.mu.RUnlock()
 
@@ -104,6 +118,24 @@ func (h *Handler) handleRetry(w http.ResponseWriter, r *http.Request) {
 		h.OnRetry()
 	}
 	http.Redirect(w, r, ingressRoot(r.URL.Path, "/retry"), http.StatusSeeOther)
+}
+
+func (h *Handler) handleLinkStep(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	h.mu.Lock()
+	switch r.FormValue("step") {
+	case "has-account", "registered":
+		h.linkStep = "link"
+	case "needs-account":
+		h.linkStep = "register"
+	}
+	h.mu.Unlock()
+
+	http.Redirect(w, r, ingressRoot(r.URL.Path, "/link-step"), http.StatusSeeOther)
 }
 
 func ingressRoot(path, suffix string) string {

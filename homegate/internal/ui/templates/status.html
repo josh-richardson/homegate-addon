@@ -113,9 +113,25 @@
 
   {{else if eq .State "waiting"}}
   <div class="status waiting">Waiting to be linked</div>
+  {{if eq .LinkStep "ask"}}
+  <p>Do you already have a Homegate account?</p>
+  <form method="POST" action="link-step">
+    <button type="submit" name="step" value="has-account">Yes, show link</button>
+    <button type="submit" name="step" value="needs-account">No, I need an account</button>
+  </form>
+
+  {{else if eq .LinkStep "register"}}
+  <p>Create an account first, then come back here to continue linking this Home Assistant instance:</p>
+  <a href="{{.RegistrationURL}}" target="_blank" class="link-box">{{.RegistrationURL}}</a>
+  <form method="POST" action="link-step">
+    <button type="submit" name="step" value="registered">I've created an account</button>
+  </form>
+
+  {{else}}
   <p>Click the link below to connect this Home Assistant instance to your Homegate account:</p>
   <a href="{{.VerificationURL}}" target="_blank" class="link-box">{{.VerificationURL}}</a>
   <p class="info">This page refreshes automatically. Once you confirm in the dashboard, the connection will start.</p>
+  {{end}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
 
   {{else if eq .State "connected"}}

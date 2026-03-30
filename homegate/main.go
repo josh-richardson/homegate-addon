@@ -49,6 +49,7 @@ func main() {
 		}
 		credStore.Clear()
 		linkStore.Clear()
+		uiHandler.ResetLinkStep()
 		uiHandler.SetVerificationURL("")
 		uiHandler.SetState("initializing", "", "")
 
