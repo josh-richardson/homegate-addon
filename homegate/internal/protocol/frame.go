@@ -21,6 +21,7 @@ const (
 	FrameResponseBody    FrameType = 0x04
 	FrameWebSocketData   FrameType = 0x05
 	FrameStreamClose     FrameType = 0x06
+	FrameRequestEnd      FrameType = 0x07
 )
 
 type Frame struct {

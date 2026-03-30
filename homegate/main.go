@@ -67,6 +67,16 @@ func main() {
 		}
 
 		c := tunnel.NewClient(brokerURL, creds.JWT, cfg.HATarget)
+		c.OnStateChange = func(state tunnel.ConnState, label string) {
+			switch state {
+			case tunnel.StateConnected:
+				uiHandler.SetState("connected", label, "")
+			case tunnel.StateReconnecting:
+				uiHandler.SetState("reconnecting", "", "")
+			case tunnel.StateFailed:
+				uiHandler.SetState("failed", "", "connection failed")
+			}
+		}
 		setClient(c)
 		go func() {
 			if err := c.Connect(); err != nil {
@@ -74,8 +84,6 @@ func main() {
 				uiHandler.SetState("failed", "", err.Error())
 			}
 		}()
-
-		go pollTunnelState(c, uiHandler)
 	} else {
 		go startLinkFlow(cfg, linkStore, credStore, uiHandler, setClient)
 	}
@@ -186,6 +194,16 @@ func startLinkFlow(
 			linkStore.Clear()
 
 			c := tunnel.NewClient(status.BrokerURL, status.DeviceJWT, cfg.HATarget)
+			c.OnStateChange = func(state tunnel.ConnState, label string) {
+				switch state {
+				case tunnel.StateConnected:
+					uiHandler.SetState("connected", label, "")
+				case tunnel.StateReconnecting:
+					uiHandler.SetState("reconnecting", "", "")
+				case tunnel.StateFailed:
+					uiHandler.SetState("failed", "", "connection failed")
+				}
+			}
 			setClient(c)
 			go func() {
 				if err := c.Connect(); err != nil {
@@ -193,8 +211,6 @@ func startLinkFlow(
 					uiHandler.SetState("failed", "", err.Error())
 				}
 			}()
-
-			go pollTunnelState(c, uiHandler)
 			return
 		}
 
@@ -204,21 +220,6 @@ func startLinkFlow(
 		}
 
 		time.Sleep(10 * time.Second)
-	}
-}
-
-func pollTunnelState(client *tunnel.Client, uiHandler *ui.Handler) {
-	for i := 0; i < 50; i++ {
-		switch client.State() {
-		case tunnel.StateConnected:
-			uiHandler.SetState("connected", client.Label(), "")
-			return
-		case tunnel.StateFailed:
-			return
-		case tunnel.StateReconnecting:
-			uiHandler.SetState("reconnecting", "", "")
-		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 

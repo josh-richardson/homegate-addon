@@ -30,13 +30,14 @@ type Client struct {
 	haTarget  string
 	proxy     *RequestProxy
 
-	label     string
-	state     atomic.Int32
-	baseDelay time.Duration
-	mu        sync.Mutex
-	ws        *websocket.Conn
-	done      chan struct{}
-	closeOnce sync.Once
+	label         string
+	state         atomic.Int32
+	baseDelay     time.Duration
+	OnStateChange func(state ConnState, label string)
+	mu            sync.Mutex
+	ws            *websocket.Conn
+	done          chan struct{}
+	closeOnce     sync.Once
 }
 
 func NewClient(brokerURL, jwt, haTarget string) *Client {
@@ -56,6 +57,16 @@ func (c *Client) SetBaseDelay(d time.Duration) {
 
 func (c *Client) State() ConnState {
 	return ConnState(c.state.Load())
+}
+
+func (c *Client) setState(s ConnState) {
+	c.state.Store(int32(s))
+	if c.OnStateChange != nil {
+		c.mu.Lock()
+		label := c.label
+		c.mu.Unlock()
+		c.OnStateChange(s, label)
+	}
 }
 
 func (c *Client) Label() string {
@@ -89,7 +100,7 @@ func (c *Client) Connect() error {
 		}
 
 		if attempt > 0 {
-			c.state.Store(int32(StateReconnecting))
+			c.setState(StateReconnecting)
 			delay := c.backoff(attempt)
 			log.Printf("reconnecting in %v (attempt %d)", delay, attempt)
 			select {
@@ -99,7 +110,7 @@ func (c *Client) Connect() error {
 			}
 		}
 
-		c.state.Store(int32(StateConnecting))
+		c.setState(StateConnecting)
 		connStart := time.Now()
 		err := c.connectOnce()
 		if err != nil {
@@ -107,7 +118,7 @@ func (c *Client) Connect() error {
 
 			// Check if this is an auth failure (should not reconnect)
 			if websocket.IsCloseError(err, websocket.ClosePolicyViolation) {
-				c.state.Store(int32(StateFailed))
+				c.setState(StateFailed)
 				return err
 			}
 
@@ -164,7 +175,7 @@ func (c *Client) connectOnce() error {
 	c.mu.Lock()
 	c.label = ack.Label
 	c.mu.Unlock()
-	c.state.Store(int32(StateConnected))
+	c.setState(StateConnected)
 
 	log.Printf("connected to broker, label=%s", ack.Label)
 
@@ -232,7 +243,7 @@ func (c *Client) readLoop(ws *websocket.Conn) error {
 			go c.handleStreamChan(sid, ch)
 			ch <- frame
 
-		case protocol.FrameRequestBody:
+		case protocol.FrameRequestBody, protocol.FrameRequestEnd:
 			if ch, ok := activeStreams[sid]; ok {
 				ch <- frame
 			}
@@ -251,13 +262,16 @@ func (c *Client) readLoop(ws *websocket.Conn) error {
 	}
 }
 
-const bodyCollectTimeout = 10 * time.Millisecond
+// bodyCollectFallback is the safety timeout for collecting request frames
+// when the broker doesn't send FrameRequestEnd (e.g. during rolling deploys).
+const bodyCollectFallback = 30 * time.Second
 
 func (c *Client) handleStreamChan(streamID uint32, ch chan *protocol.Frame) {
 	var frames []*protocol.Frame
 
-	// Collect frames — wait briefly for body frames after headers
-	timer := time.NewTimer(bodyCollectTimeout)
+	// Collect frames until FrameRequestEnd signals the request is complete.
+	// The fallback timeout guards against a missing end signal.
+	timer := time.NewTimer(bodyCollectFallback)
 	defer timer.Stop()
 
 	for {
@@ -266,10 +280,10 @@ func (c *Client) handleStreamChan(streamID uint32, ch chan *protocol.Frame) {
 			if !ok {
 				goto dispatch
 			}
-			frames = append(frames, f)
-			if f.Type == protocol.FrameRequestBody {
-				timer.Reset(bodyCollectTimeout)
+			if f.Type == protocol.FrameRequestEnd {
+				goto dispatch
 			}
+			frames = append(frames, f)
 		case <-timer.C:
 			goto dispatch
 		case <-c.done:

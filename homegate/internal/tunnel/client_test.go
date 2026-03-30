@@ -96,6 +96,9 @@ func TestClient_ProxiesHTTPRequest(t *testing.T) {
 		reqFrame := &protocol.Frame{StreamID: 1, Type: protocol.FrameRequestHeaders, Payload: headersJSON}
 		ws.WriteMessage(websocket.BinaryMessage, reqFrame.Encode())
 
+		endFrame := &protocol.Frame{StreamID: 1, Type: protocol.FrameRequestEnd}
+		ws.WriteMessage(websocket.BinaryMessage, endFrame.Encode())
+
 		// Read response frames
 		for {
 			_, raw, err := ws.ReadMessage()
