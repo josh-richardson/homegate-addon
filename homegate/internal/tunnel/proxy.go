@@ -15,14 +15,14 @@ import (
 )
 
 type RequestHeaders struct {
-	Method  string            `json:"method"`
-	Path    string            `json:"path"`
-	Headers map[string]string `json:"headers"`
+	Method  string              `json:"method"`
+	Path    string              `json:"path"`
+	Headers map[string][]string `json:"headers"`
 }
 
 type ResponseHeaders struct {
-	StatusCode int               `json:"status_code"`
-	Headers    map[string]string `json:"headers"`
+	StatusCode int                 `json:"status_code"`
+	Headers    map[string][]string `json:"headers"`
 }
 
 type RequestProxy struct {
@@ -76,7 +76,7 @@ func (p *RequestProxy) HandleStream(streamID uint32, requestFrames []*protocol.F
 		return
 	}
 
-	for k, v := range reqHeaders.Headers {
+	for k, vals := range reqHeaders.Headers {
 		// Strip proxy/CDN headers — the agent is the final hop, not a proxy.
 		// Forwarding these to HA from an untrusted IP causes 400 errors.
 		switch strings.ToLower(k) {
@@ -85,7 +85,9 @@ func (p *RequestProxy) HandleStream(streamID uint32, requestFrames []*protocol.F
 			"cf-visitor", "cdn-loop", "connection", "accept-encoding":
 			continue
 		}
-		req.Header.Set(k, v)
+		for _, v := range vals {
+			req.Header.Add(k, v)
+		}
 	}
 	// Explicitly request uncompressed responses so Content-Length is accurate.
 	// Go's http.Client auto-adds Accept-Encoding: gzip and decompresses,
@@ -104,10 +106,7 @@ func (p *RequestProxy) HandleStream(streamID uint32, requestFrames []*protocol.F
 	// Send response headers
 	respHeaders := ResponseHeaders{
 		StatusCode: resp.StatusCode,
-		Headers:    make(map[string]string),
-	}
-	for k, v := range resp.Header {
-		respHeaders.Headers[k] = v[0]
+		Headers:    resp.Header,
 	}
 	headersJSON, _ := json.Marshal(respHeaders)
 	sendFrame(&protocol.Frame{
@@ -144,7 +143,7 @@ func (p *RequestProxy) HandleStream(streamID uint32, requestFrames []*protocol.F
 func (p *RequestProxy) sendError(streamID uint32, statusCode int, message string, sendFrame func(*protocol.Frame)) {
 	respHeaders := ResponseHeaders{
 		StatusCode: statusCode,
-		Headers:    map[string]string{"Content-Type": "text/plain"},
+		Headers:    map[string][]string{"Content-Type": {"text/plain"}},
 	}
 	headersJSON, _ := json.Marshal(respHeaders)
 	sendFrame(&protocol.Frame{StreamID: streamID, Type: protocol.FrameResponseHeaders, Payload: headersJSON})

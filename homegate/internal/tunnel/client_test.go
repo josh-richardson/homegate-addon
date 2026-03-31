@@ -91,7 +91,7 @@ func TestClient_ProxiesHTTPRequest(t *testing.T) {
 		ws.WriteMessage(websocket.TextMessage, ack)
 
 		// Send a request to the agent
-		reqHeaders := RequestHeaders{Method: "GET", Path: "/api/states", Headers: map[string]string{}}
+		reqHeaders := RequestHeaders{Method: "GET", Path: "/api/states", Headers: map[string][]string{}}
 		headersJSON, _ := json.Marshal(reqHeaders)
 		reqFrame := &protocol.Frame{StreamID: 1, Type: protocol.FrameRequestHeaders, Payload: headersJSON}
 		ws.WriteMessage(websocket.BinaryMessage, reqFrame.Encode())

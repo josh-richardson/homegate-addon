@@ -32,7 +32,7 @@ func TestProxyHTTPRequest(t *testing.T) {
 	reqHeaders := RequestHeaders{
 		Method:  "GET",
 		Path:    "/api/states",
-		Headers: map[string]string{"Accept": "application/json"},
+		Headers: map[string][]string{"Accept": {"application/json"}},
 	}
 	headersJSON, _ := json.Marshal(reqHeaders)
 
@@ -96,7 +96,7 @@ func TestProxyPOSTWithBody(t *testing.T) {
 	reqHeaders := RequestHeaders{
 		Method:  "POST",
 		Path:    "/api/services/light/turn_on",
-		Headers: map[string]string{"Content-Type": "application/json"},
+		Headers: map[string][]string{"Content-Type": {"application/json"}},
 	}
 	headersJSON, _ := json.Marshal(reqHeaders)
 
@@ -121,7 +121,7 @@ func TestProxyHAUnavailable(t *testing.T) {
 	reqHeaders := RequestHeaders{
 		Method:  "GET",
 		Path:    "/api/states",
-		Headers: map[string]string{},
+		Headers: map[string][]string{},
 	}
 	headersJSON, _ := json.Marshal(reqHeaders)
 

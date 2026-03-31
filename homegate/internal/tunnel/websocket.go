@@ -21,7 +21,7 @@ func (p *RequestProxy) HandleWebSocket(streamID uint32, reqHeaders RequestHeader
 
 	// Forward relevant headers
 	httpHeaders := http.Header{}
-	for k, v := range reqHeaders.Headers {
+	for k, vals := range reqHeaders.Headers {
 		switch strings.ToLower(k) {
 		case "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host",
 			"x-real-ip", "cf-connecting-ip", "cf-ipcountry", "cf-ray",
@@ -32,7 +32,9 @@ func (p *RequestProxy) HandleWebSocket(streamID uint32, reqHeaders RequestHeader
 			// and proxy/CDN headers
 			continue
 		}
-		httpHeaders.Set(k, v)
+		for _, v := range vals {
+			httpHeaders.Add(k, v)
+		}
 	}
 
 	upstreamWS, _, err := websocket.DefaultDialer.Dial(wsURL, httpHeaders)
@@ -46,7 +48,7 @@ func (p *RequestProxy) HandleWebSocket(streamID uint32, reqHeaders RequestHeader
 	// Send response headers to indicate successful upgrade
 	respHeaders := ResponseHeaders{
 		StatusCode: 101,
-		Headers:    map[string]string{},
+		Headers:    map[string][]string{},
 	}
 	headersJSON, _ := json.Marshal(respHeaders)
 	sendFrame(&protocol.Frame{
@@ -101,10 +103,14 @@ func (p *RequestProxy) HandleWebSocket(streamID uint32, reqHeaders RequestHeader
 	})
 }
 
-func isWebSocketUpgrade(headers map[string]string) bool {
-	for k, v := range headers {
-		if strings.EqualFold(k, "upgrade") && strings.EqualFold(v, "websocket") {
-			return true
+func isWebSocketUpgrade(headers map[string][]string) bool {
+	for k, vals := range headers {
+		if strings.EqualFold(k, "upgrade") {
+			for _, v := range vals {
+				if strings.EqualFold(v, "websocket") {
+					return true
+				}
+			}
 		}
 	}
 	return false
