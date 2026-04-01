@@ -10,6 +10,7 @@ import (
 type LinkState struct {
 	DeviceUUID      string `json:"deviceUuid"`
 	RequestID       string `json:"requestId"`
+	ClaimSecret     string `json:"claimSecret"`
 	VerificationURL string `json:"verificationUrl"`
 	ExpiresAt       string `json:"expiresAt"`
 }

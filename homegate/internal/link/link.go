@@ -10,15 +10,20 @@ import (
 
 type LinkRequestResult struct {
 	RequestID       string `json:"requestId"`
+	ClaimSecret     string `json:"claimSecret"`
 	VerificationURL string `json:"verificationUrl"`
 	ExpiresAt       string `json:"expiresAt"`
 }
 
 type LinkStatusResult struct {
-	Status    string `json:"status"`
-	DeviceID  string `json:"deviceId,omitempty"`
-	DeviceJWT string `json:"deviceJwt,omitempty"`
-	BrokerURL string `json:"brokerUrl,omitempty"`
+	Status string `json:"status"`
+}
+
+type ClaimResult struct {
+	DeviceID  string `json:"deviceId"`
+	DeviceJWT string `json:"deviceJwt"`
+	BrokerURL string `json:"brokerUrl"`
+	SiteID    string `json:"siteId"`
 }
 
 func CreateRequest(apiBaseURL, deviceUUID string) (*LinkRequestResult, error) {
@@ -71,6 +76,44 @@ func PollStatus(apiBaseURL, requestID string) (*LinkStatusResult, error) {
 	var result LinkStatusResult
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("decode status response: %w", err)
+	}
+	return &result, nil
+}
+
+func ClaimCredentials(apiBaseURL, requestID, claimSecret string) (*ClaimResult, error) {
+	body, err := json.Marshal(map[string]string{
+		"requestId":   requestID,
+		"claimSecret": claimSecret,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Post(
+		apiBaseURL+"/device-auth/link-claim",
+		"application/json",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("claim credentials failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp struct {
+			Message string `json:"message"`
+		}
+		json.NewDecoder(resp.Body).Decode(&errResp)
+		if errResp.Message != "" {
+			return nil, fmt.Errorf("claim credentials failed: %s", errResp.Message)
+		}
+		return nil, fmt.Errorf("claim credentials failed with status %d", resp.StatusCode)
+	}
+
+	var result ClaimResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode claim response: %w", err)
 	}
 	return &result, nil
 }

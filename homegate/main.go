@@ -123,6 +123,7 @@ func newLinkRequest(cfg *config.Config, linkStore *link.Store, uiHandler *ui.Han
 	state := &link.LinkState{
 		DeviceUUID:      deviceUUID,
 		RequestID:       result.RequestID,
+		ClaimSecret:     result.ClaimSecret,
 		VerificationURL: result.VerificationURL,
 		ExpiresAt:       result.ExpiresAt,
 	}
@@ -180,12 +181,19 @@ func startLinkFlow(
 		}
 
 		if status.Status == "completed" {
-			log.Println("link confirmed, saving credentials")
+			log.Println("link confirmed, claiming credentials")
+
+			claim, err := link.ClaimCredentials(cfg.APIBaseURL, state.RequestID, state.ClaimSecret)
+			if err != nil {
+				log.Printf("failed to claim credentials: %v", err)
+				uiHandler.SetState("failed", "", "Failed to claim credentials")
+				return
+			}
 
 			newCreds := &credentials.Credentials{
-				DeviceID:  status.DeviceID,
-				JWT:       status.DeviceJWT,
-				BrokerURL: status.BrokerURL,
+				DeviceID:  claim.DeviceID,
+				JWT:       claim.DeviceJWT,
+				BrokerURL: claim.BrokerURL,
 			}
 			if err := credStore.Save(newCreds); err != nil {
 				log.Printf("failed to save credentials: %v", err)
@@ -194,7 +202,7 @@ func startLinkFlow(
 			}
 			linkStore.Clear()
 
-			c := tunnel.NewClient(status.BrokerURL, status.DeviceJWT, cfg.HATarget)
+			c := tunnel.NewClient(claim.BrokerURL, claim.DeviceJWT, cfg.HATarget)
 			c.OnStateChange = func(state tunnel.ConnState, label string) {
 				switch state {
 				case tunnel.StateConnected:
