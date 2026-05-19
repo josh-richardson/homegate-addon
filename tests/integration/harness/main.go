@@ -192,11 +192,19 @@ func (h *harness) createSite() error {
 }
 
 func (h *harness) startAddon() error {
-	if err := os.RemoveAll(h.dataDir); err != nil {
-		return err
-	}
+	// Make sure no previous run is still up; ignore failures (probably nothing running).
+	_ = exec.Command("docker", "compose", "-f", h.composeFile, "down", "-v").Run()
+
 	if err := os.MkdirAll(h.dataDir, 0o755); err != nil {
 		return err
+	}
+	// Files in /data are written as root by the addon container, so a plain
+	// os.RemoveAll fails for the host user. Clean via a throwaway container.
+	clean := exec.Command("docker", "run", "--rm", "-v", h.dataDir+":/data", "alpine", "sh", "-c", "rm -rf /data/* /data/.*[!.]* 2>/dev/null || true")
+	clean.Stdout = os.Stdout
+	clean.Stderr = os.Stderr
+	if err := clean.Run(); err != nil {
+		return fmt.Errorf("clean data dir: %w", err)
 	}
 	// Write /data/options.json so run.sh picks the right environment
 	envName := "staging"
@@ -220,11 +228,14 @@ func (h *harness) startAddon() error {
 }
 
 func (h *harness) readLinkRequest() error {
-	path := filepath.Join(h.dataDir, "link-request.json")
+	// The addon container writes /data/link-request.json as root; the host
+	// bind-mounted file is unreadable for the harness's user. Read via
+	// `docker compose exec` so we go through the container's perms instead.
 	deadline := time.Now().Add(h.linkTimeout)
 	for time.Now().Before(deadline) {
-		data, err := os.ReadFile(path)
-		if err == nil {
+		cmd := exec.Command("docker", "compose", "-f", h.composeFile, "exec", "-T", "addon", "cat", "/data/link-request.json")
+		data, err := cmd.Output()
+		if err == nil && len(data) > 0 {
 			var st struct {
 				RequestID string `json:"requestId"`
 			}
@@ -236,7 +247,7 @@ func (h *harness) readLinkRequest() error {
 		}
 		time.Sleep(2 * time.Second)
 	}
-	return fmt.Errorf("timed out waiting for %s after %s", path, h.linkTimeout)
+	return fmt.Errorf("timed out waiting for /data/link-request.json after %s", h.linkTimeout)
 }
 
 func (h *harness) confirmLink() error {
