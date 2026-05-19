@@ -1,0 +1,26 @@
+name: homegate-e2e
+
+services:
+  addon:
+    build:
+      context: ../../homegate
+      dockerfile: Dockerfile
+    environment:
+      # run.sh reads /data/options.json; we mount one in below
+      DATA_DIR: /data
+      INGRESS_PORT: "8080"
+      # Override HA_TARGET so the addon proxies to our mock-ha sidecar
+      # (run.sh sets this to homeassistant:8123 by default)
+      HA_TARGET: http://mock-ha:8123
+    volumes:
+      - ./data:/data
+    depends_on:
+      - mock-ha
+    restart: "no"
+
+  mock-ha:
+    build:
+      context: ./mock-ha
+    environment:
+      MOCK_HA_BODY: ${MOCK_HA_BODY:-homegate-e2e-ok}
+    restart: "no"
