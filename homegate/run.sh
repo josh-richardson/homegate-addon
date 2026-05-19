@@ -1,15 +1,27 @@
 #!/usr/bin/env sh
 set -e
 
-# Read HA addon options and export as env vars for the agent
 CONFIG_PATH=/data/options.json
+ENVIRONMENT=production
 
 if [ -f "$CONFIG_PATH" ]; then
-  export API_BASE_URL=$(jq -r '.api_base_url' "$CONFIG_PATH")
-  export BROKER_URL=$(jq -r '.broker_url' "$CONFIG_PATH")
-  export HOSTNAME_DOMAIN=$(jq -r '.hostname_domain' "$CONFIG_PATH")
-  export HOSTNAME_SEPARATOR=$(jq -r '.hostname_separator' "$CONFIG_PATH")
+  ENVIRONMENT=$(jq -r '.environment // "production"' "$CONFIG_PATH")
 fi
+
+case "$ENVIRONMENT" in
+  staging)
+    export API_BASE_URL="https://homegate-test.website/api"
+    export BROKER_URL="wss://broker.homegate-test.website"
+    export HOSTNAME_DOMAIN="homegate-test.website"
+    export HOSTNAME_SEPARATOR="."
+    ;;
+  production|*)
+    export API_BASE_URL="https://homegate.network/api"
+    export BROKER_URL="wss://broker.homegate.network"
+    export HOSTNAME_DOMAIN="homegate.network"
+    export HOSTNAME_SEPARATOR="."
+    ;;
+esac
 
 export DATA_DIR=/data
 export INGRESS_PORT=8080

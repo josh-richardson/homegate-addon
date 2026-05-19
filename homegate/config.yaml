@@ -1,5 +1,5 @@
 name: Homegate
-version: "1.1.5"
+version: "1.1.6"
 slug: homegate
 image: ghcr.io/josh-richardson/homegate-addon-{arch}
 description: Secure remote access to Home Assistant via Homegate tunnels
@@ -19,12 +19,6 @@ map:
   - data:rw
 init: false
 options:
-  api_base_url: "https://test.homegate.network/api"
-  broker_url: "wss://broker-test.homegate.network"
-  hostname_domain: "test.homegate.network"
-  hostname_separator: "-"
+  environment: production
 schema:
-  api_base_url: url
-  broker_url: url
-  hostname_domain: str
-  hostname_separator: str
+  environment: list(production|staging)
